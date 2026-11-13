@@ -1,0 +1,115 @@
+{
+  "pedreiras": {
+    "municipio": "Pedreiras",
+    "linhas": [
+      {
+        "abrigo": "Centro Comunitário N. Sra. Santana",
+        "familias": 4,
+        "pessoas": 12
+      },
+      {
+        "abrigo": "Centro Comunitario Multirao",
+        "familias": 2,
+        "pessoas": 4
+      },
+      {
+        "abrigo": "Sítio Salomão",
+        "familias": 16,
+        "pessoas": 52
+      },
+      {
+        "abrigo": "Igreja Assembleia de Deus",
+        "familias": 2,
+        "pessoas": 9
+      },
+      {
+        "abrigo": "Capela Alto São José",
+        "familias": 1,
+        "pessoas": 2
+      },
+      {
+        "abrigo": "Centro Comunitário Paulo VI",
+        "familias": 7,
+        "pessoas": 22
+      },
+      {
+        "abrigo": "Centro Comunitário N. Sra. das Graças",
+        "familias": 5,
+        "pessoas": 13
+      },
+      {
+        "abrigo": "Galpão Fazenda Santa Emília",
+        "familias": 3,
+        "pessoas": 8
+      },
+      {
+        "abrigo": "Loteamento Vitória",
+        "familias": 2,
+        "pessoas": 7
+      },
+      {
+        "abrigo": "Ginásio de Esportes Goiabal",
+        "familias": 9,
+        "pessoas": 29
+      },
+      {
+        "abrigo": "Quadra Imaculada",
+        "familias": 1,
+        "pessoas": 2
+      },
+      {
+        "abrigo": "Correia de Araújo",
+        "familias": 5,
+        "pessoas": 11
+      }
+    ],
+    "totais": {
+      "familias": 57,
+      "pessoas": 171
+    }
+  },
+  "trizidela": {
+    "municipio": "Trizidela do Vale",
+    "linhas": [
+      {
+        "abrigo": "Praça da Juventude",
+        "familias": 16,
+        "pessoas": 46
+      },
+      {
+        "abrigo": "Ginásio Municipal",
+        "familias": 10,
+        "pessoas": 30
+      },
+      {
+        "abrigo": "Vestiário do Estádio",
+        "familias": 2,
+        "pessoas": 11
+      },
+      {
+        "abrigo": "Quadra da Paróquia St. Antônio de Pádua",
+        "familias": 16,
+        "pessoas": 41
+      },
+      {
+        "abrigo": "Igreja Santa Clara",
+        "familias": 3,
+        "pessoas": 11
+      },
+      {
+        "abrigo": "Escola de Música",
+        "familias": 13,
+        "pessoas": 33
+      },
+      {
+        "abrigo": "Parque Maratá",
+        "familias": 9,
+        "pessoas": 25
+      }
+    ],
+    "totais": {
+      "familias": 69,
+      "pessoas": 197
+    }
+  }
+}

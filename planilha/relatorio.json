@@ -1,0 +1,14 @@
+{
+  "titulo": "Relatório de enchente (exemplo)",
+  "resumo": "Edite esta aba para refletir o relatório oficial.",
+  "itens": [
+    {
+      "label": "Situação",
+      "valor": "Normal / acompanhar"
+    },
+    {
+      "label": "Observações",
+      "valor": "Substitua pelos dados do relatório oficial."
+    }
+  ]
+}

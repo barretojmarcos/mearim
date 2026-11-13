@@ -1,0 +1,60 @@
+{
+  "titulo": "Indicadores sociais — enchente Rio Mearim",
+  "colunas": [
+    {
+      "id": "pedreiras",
+      "label": "Pedreiras"
+    },
+    {
+      "id": "trizidela",
+      "label": "Trizidela do Vale"
+    }
+  ],
+  "linhas": [
+    {
+      "indicador": "Famílias em abrigo",
+      "pedreiras": 58,
+      "trizidela": 69
+    },
+    {
+      "indicador": "Pessoas desabrigadas",
+      "pedreiras": 172,
+      "trizidela": 197
+    },
+    {
+      "indicador": "Famílias desalojadas",
+      "pedreiras": 78,
+      "trizidela": 75
+    },
+    {
+      "indicador": "Pessoas desalojadas",
+      "pedreiras": 205,
+      "trizidela": 217
+    },
+    {
+      "indicador": "Famílias isoladas (povoados)",
+      "pedreiras": 206,
+      "trizidela": 0
+    },
+    {
+      "indicador": "Pessoas isoladas",
+      "pedreiras": 573,
+      "trizidela": 0
+    },
+    {
+      "indicador": "Famílias atingidas",
+      "pedreiras": 342,
+      "trizidela": 144
+    },
+    {
+      "indicador": "Pessoas atingidas",
+      "pedreiras": 950,
+      "trizidela": 414
+    },
+    {
+      "indicador": "Total de pessoas atingidas",
+      "pedreiras": 1364,
+      "trizidela": null
+    }
+  ]
+}

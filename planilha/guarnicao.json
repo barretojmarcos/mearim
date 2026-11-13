@@ -1,0 +1,40 @@
+{
+  "data_referencia": "2026-04-28",
+  "unidade": "13ª CIBM / Defesa Civil",
+  "equipe": [
+    {
+      "nome": "Maj Carlos",
+      "funcao": "CMT"
+    },
+    {
+      "nome": "Cap Marinho",
+      "funcao": "SUBCMT"
+    },
+    {
+      "nome": "Ten David Felipe",
+      "funcao": "Chefe de Socorro"
+    },
+    {
+      "nome": "Ten Filipe",
+      "funcao": "Oficial de dia"
+    },
+    {
+      "nome": "BC Carla",
+      "funcao": "Comunicante"
+    },
+    {
+      "nome": "BC Lima",
+      "funcao": "Motorista AR-47"
+    },
+    {
+      "nome": "BC José",
+      "funcao": "Socorrista"
+    },
+    {
+      "nome": "BC Brandão",
+      "funcao": "Motorista ABT-20"
+    }
+  ],
+  "observacoes": "",
+  "contatos": []
+}
