@@ -1,0 +1,27 @@
+# Teste único: a ANA responde aos servidores do GitHub Actions?
+# Copiar para .github/workflows/ do repositório do site, rodar pelo botão "Run workflow" e apagar depois.
+name: teste-ana
+on: workflow_dispatch
+jobs:
+  teste:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Pedir token à ANA (não imprime a resposta)
+        env:
+          ANA_USER: ${{ secrets.ANA_USER }}
+          ANA_PASSWORD: ${{ secrets.ANA_PASSWORD }}
+        run: |
+          http=$(curl -s -o r.json -w '%{http_code}' --max-time 60 \
+            -H "Identificador: $ANA_USER" -H "Senha: $ANA_PASSWORD" \
+            -H "User-Agent: Mozilla/5.0 (compatible; HidroWebService-client/1.0)" \
+            "https://www.ana.gov.br/hidrowebservice/EstacoesTelemetricas/OAUth/v1" || true)
+          echo "HTTP: $http"
+          python3 - <<'PY'
+          import json
+          try:
+              d = json.load(open("r.json"))
+              print("status:", d.get("status"), "| itens presentes:", bool(d.get("items")))
+          except Exception as e:
+              print("resposta não é JSON:", type(e).__name__)
+          PY
+          rm -f r.json
