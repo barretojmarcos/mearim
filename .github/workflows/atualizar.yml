@@ -1,15 +1,27 @@
-# Coletor horário do Rio Mearim. Vai em .github/workflows/ do repositório PÚBLICO do site.
+# Coletor do Rio Mearim. Vai em .github/workflows/ do repositório PÚBLICO do site.
 # O código vem do repositório privado barretojmarcos/ana-pedreiras-api.
-# Segredos necessários: ANA_USER, ANA_PASSWORD, CODIGO_DEPLOY_KEY e, opcional, HEALTHCHECK_URL.
+# Às :07 de cada hora roda a execução completa. Às :22, :37 e :52 roda a vigília, que só faz
+# alguma coisa se dados/vigilia.json estiver com "ativa": true (o próprio coletor liga e desliga).
+# Um cron por minuto: o github.event.schedule diz qual disparou, e o atraso do agendamento é medido
+# mesmo acima de 15 min. Vigília = qualquer agendamento que não seja o das :07.
+# Segredos necessários: ANA_USER, ANA_PASSWORD, CODIGO_DEPLOY_KEY, TELEGRAM_BOT_TOKEN e
+# TELEGRAM_CHAT_ID (sem os dois do Telegram o alerta fica desligado) e, opcional, HEALTHCHECK_URL.
 name: atualizar
 on:
   schedule:
     - cron: "7 * * * *"
+    - cron: "22 * * * *"
+    - cron: "37 * * * *"
+    - cron: "52 * * * *"
   workflow_dispatch:
     inputs:
       horario:
         description: "Horário HH:MM para o boletim sob demanda (opcional)"
         required: false
+      teste_alerta:
+        description: "Mandar a mensagem de teste do alerta ao grupo da guarnição"
+        type: boolean
+        default: false
 permissions:
   contents: write
   pages: write
@@ -30,27 +42,60 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: dados
+          path: dados
+      - id: decidir
+        name: Decidir se esta execução roda
+        env:
+          AGENDAMENTO: ${{ github.event.schedule }}
+        run: |
+          rodar=true
+          if [ -n "$AGENDAMENTO" ] && [ "$AGENDAMENTO" != "7 * * * *" ]; then
+            rodar=$(python3 -c "import json,sys; print('true' if json.load(open(sys.argv[1])).get('ativa') is True else 'false')" dados/vigilia.json 2>/dev/null || echo false)
+          fi
+          echo "rodar=$rodar" >> "$GITHUB_OUTPUT"
+          echo "rodar=$rodar"
+      - uses: actions/checkout@v4
+        if: steps.decidir.outputs.rodar == 'true'
+        with:
           repository: barretojmarcos/ana-pedreiras-api
           ssh-key: ${{ secrets.CODIGO_DEPLOY_KEY }}
           path: codigo
-      - uses: actions/checkout@v4
-        with:
-          ref: dados
-          path: dados
       - uses: actions/setup-python@v5
+        if: steps.decidir.outputs.rodar == 'true'
         with:
           python-version: "3.12"
           cache: pip
           cache-dependency-path: codigo/requirements-prod.txt
-      - run: pip install -r codigo/requirements-prod.txt
+      - if: steps.decidir.outputs.rodar == 'true'
+        run: pip install -r codigo/requirements-prod.txt
+      - name: Ler a hora de início da execução
+        if: steps.decidir.outputs.rodar == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # O contexto github não tem a hora em que a execução começou; o atraso do agendamento é medido
+          # dela. O token fica só neste passo. Se a consulta falhar, o coletor usa o próprio relógio.
+          inicio=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}" --jq .run_started_at 2>/dev/null || true)
+          echo "INICIO_EXECUCAO=$inicio" >> "$GITHUB_ENV"
       - name: Coletar e montar o site
+        if: steps.decidir.outputs.rodar == 'true'
         working-directory: codigo
         env:
           ANA_USER: ${{ secrets.ANA_USER }}
           ANA_PASSWORD: ${{ secrets.ANA_PASSWORD }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           HORARIO: ${{ inputs.horario }}
-        run: python atualizar.py --dados ../dados --site ../_site --horario "$HORARIO"
+          TESTE_ALERTA: ${{ inputs.teste_alerta }}
+          AGENDADO: ${{ github.event.schedule }}
+          MODO: ${{ github.event_name == 'schedule' && github.event.schedule != '7 * * * *' && 'vigilia' || 'completo' }}
+        run: |
+          args=(--modo "$MODO")
+          if [ "$TESTE_ALERTA" = "true" ]; then args+=(--teste-alerta); fi
+          python atualizar.py --dados ../dados --site ../_site --horario "$HORARIO" "${args[@]}"
       - name: Gravar dados
+        if: always() && steps.decidir.outputs.rodar == 'true'
         working-directory: dados
         run: |
           git config user.name "coletor-mearim"
@@ -58,16 +103,19 @@ jobs:
           git add -A
           git diff --cached --quiet || (git commit -q -m "dados: $(date +%Y-%m-%dT%H:%M)" && git push -q)
       - uses: actions/upload-pages-artifact@v3
+        if: steps.decidir.outputs.rodar == 'true'
         with:
           path: _site
       - id: publicar
+        if: steps.decidir.outputs.rodar == 'true'
         uses: actions/deploy-pages@v4
       - name: Manter o agendamento ativo
+        if: steps.decidir.outputs.rodar == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/atualizar.yml/enable"
       - name: Avisar o monitor
-        if: always()
+        if: always() && (github.event_name != 'schedule' || github.event.schedule == '7 * * * *')
         env:
           HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
           SUFIXO: ${{ job.status == 'success' && '' || '/fail' }}
