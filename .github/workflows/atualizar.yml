@@ -101,7 +101,14 @@ jobs:
           git config user.name "coletor-mearim"
           git config user.email "coletor-mearim@users.noreply.github.com"
           git add -A
-          git diff --cached --quiet || (git commit -q -m "dados: $(date +%Y-%m-%dT%H:%M)" && git push -q)
+          git diff --cached --quiet || git commit -q -m "dados: $(date +%Y-%m-%dT%H:%M)"
+          # O Mac também grava no ramo dados (sigop/efetivo.json, arquivo que o coletor não toca):
+          # traz o que chegou durante a execução antes de enviar.
+          for tentativa in 1 2 3; do
+            git pull -q --rebase origin dados && git push -q && exit 0
+            sleep 5
+          done
+          exit 1
       - uses: actions/upload-pages-artifact@v3
         if: steps.decidir.outputs.rodar == 'true'
         with:
