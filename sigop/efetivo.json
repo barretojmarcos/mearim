@@ -50,7 +50,7 @@
   },
   "sessao": {
     "ultimo_ok": "2026-11-16T14:26:14-03:00",
-    "falha_desde": null,
-    "erro": null
+    "falha_desde": "2026-11-16T19:57:14-03:00",
+    "erro": "sem_sessao"
   }
 }
