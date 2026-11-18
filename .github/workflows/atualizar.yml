@@ -3,9 +3,10 @@
 # Quem dispara: o relógio externo (cron-job.org chamando workflow_dispatch com relogio=true às :07,
 # :22, :37 e :52) e, de reserva, os quatro crons abaixo. O agendamento do GitHub não basta sozinho:
 # de 13 a 16/11/2026 ele criou só uma hora de execuções a cada 4 a 8 horas.
-# Todo disparo automático (relógio ou cron) passa pelo passo decidir: execução completa se a última
-# completa (dados/ultima_completa.json) tem 50 min ou mais; senão vigília, se dados/vigilia.json
-# estiver com "ativa": true (o próprio coletor liga e desliga); senão termina sem fazer nada.
+# Todo disparo automático (relógio ou cron) passa pelo passo decidir: execução completa quando a ANA
+# deve ter lote novo (a leitura mais nova publicada tem 60 min ou mais; a ANA publica de hora em hora,
+# às :49) ou quando a última completa (dados/ultima_completa.json) tem 60 min ou mais; senão vigília,
+# se dados/vigilia.json estiver com "ativa": true (o próprio coletor liga e desliga); senão nada.
 # Disparo manual (Run workflow sem relogio) é sempre completo. Um cron por minuto: o
 # github.event.schedule diz qual disparou e o atraso do agendamento é medido mesmo acima de 15 min.
 # Segredos necessários: ANA_USER, ANA_PASSWORD, CODIGO_DEPLOY_KEY, TELEGRAM_BOT_TOKEN e
@@ -63,11 +64,22 @@ jobs:
           python3 - <<'PY'
           import json
           import os
-          from datetime import datetime
+          from datetime import datetime, timedelta, timezone
           from pathlib import Path
 
-          LIMIAR_MIN = 50  # relógio a cada 15 min: a completa cai sempre no mesmo minuto de cada hora
+          # A ANA publica de hora em hora (às :49, as quatro leituras de 15 min juntas). A completa vai
+          # atrás do lote: roda quando a leitura mais nova já publicada tem LOTE_NOVO_MIN ou mais (a
+          # das :45 completa 60 min às :45 da hora seguinte; o relógio das :52 pega o lote das :49).
+          # Se a ANA atrasar, tenta de novo a cada disparo até INSISTIR_ATE_MIN; depois disso a
+          # estação está parada e volta à regra da hora. ULTIMA_COMPLETA_MIN garante planilha e tempo
+          # atualizados mesmo sem leitura nova. INTERVALO_MIN_MIN segura disparos colados (reserva).
+          LOTE_NOVO_MIN = 60
+          INSISTIR_ATE_MIN = 180
+          ULTIMA_COMPLETA_MIN = 60
+          INTERVALO_MIN_MIN = 10
+          FUSO = timezone(timedelta(hours=-3))  # Pedreiras, sem horário de verão
           MARCA = Path("dados/ultima_completa.json")
+          MEDICOES = Path("dados/medicoes/33281000")  # Pedreiras II, um CSV por mês em ordem
           agora = datetime.now().astimezone()
 
 
@@ -79,12 +91,33 @@ jobs:
               return conteudo if isinstance(conteudo, dict) else {}
 
 
+          def minutos_desde(instante):
+              minutos = (agora - instante).total_seconds() / 60
+              return minutos if minutos >= 0 else None  # no futuro: relógio torto, não confiar
+
+
+          def idade_da_leitura():
+              """Minutos desde a leitura mais nova publicada no ramo dados; None se não der para saber."""
+              try:
+                  for arquivo in sorted(MEDICOES.glob("*.csv"), reverse=True):
+                      linhas = [l for l in arquivo.read_text(encoding="utf-8").splitlines()[1:] if l.strip()]
+                      if linhas:
+                          leitura = datetime.strptime(linhas[-1].split(",", 1)[0], "%Y-%m-%d %H:%M:%S")
+                          return minutos_desde(leitura.replace(tzinfo=FUSO))
+              except (OSError, ValueError):
+                  pass
+              return None
+
+
           try:
-              idade = (agora - datetime.fromisoformat(ler(MARCA)["inicio"])).total_seconds() / 60
+              idade = minutos_desde(datetime.fromisoformat(ler(MARCA)["inicio"]))
           except (KeyError, TypeError, ValueError):
               idade = None  # sem marca, ilegível ou sem fuso: monta o site
+          leitura = idade_da_leitura()
           automatico = bool(os.environ.get("AGENDAMENTO")) or os.environ.get("RELOGIO") == "true"
-          if not automatico or idade is None or not 0 <= idade < LIMIAR_MIN:
+          lote_novo = (idade is not None and idade >= INTERVALO_MIN_MIN
+                       and leitura is not None and LOTE_NOVO_MIN <= leitura < INSISTIR_ATE_MIN)
+          if not automatico or idade is None or idade >= ULTIMA_COMPLETA_MIN or lote_novo:
               modo = "completo"
               MARCA.write_text(json.dumps({"inicio": agora.isoformat(timespec="seconds")}) + "\n",
                                encoding="utf-8")
@@ -92,7 +125,12 @@ jobs:
               modo = "vigilia"
           else:
               modo = ""
-          print(f"última completa há {'?' if idade is None else round(idade)} min; modo: {modo or 'nenhum'}")
+          def texto(minutos):
+              return "?" if minutos is None else round(minutos)
+
+
+          print(f"última completa há {texto(idade)} min; leitura publicada há {texto(leitura)} min; "
+                f"modo: {modo or 'nenhum'}")
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as saida:
               saida.write(f"rodar={'true' if modo else 'false'}\nmodo={modo}\n")
           PY
