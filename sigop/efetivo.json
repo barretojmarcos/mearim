@@ -1,27 +1,6 @@
 {
   "unidade": "13ª COMPANHIA INDEPENDENTE DE BOMBEIROS MILITAR - TRIZIDELA DO VALE",
   "escalas": {
-    "2026-11-16": {
-      "coletado_em": "2026-11-16T14:26:14-03:00",
-      "equipe": [
-        {
-          "nome": "1º TEN QOC FILIPE OLIVEIRA",
-          "funcao": "CHEFE DE SOCORRO"
-        },
-        {
-          "nome": "2º SGT QPBM-0 HAROLDO",
-          "funcao": "COMANDANTE DE GUARNIÇÃO"
-        },
-        {
-          "nome": "BC MARIA",
-          "funcao": "CHEFE DA 1ª LINHA"
-        },
-        {
-          "nome": "BC ERICK",
-          "funcao": "MOTORISTA"
-        }
-      ]
-    },
     "2026-11-17": {
       "coletado_em": "2026-11-16T14:26:14-03:00",
       "equipe": [
@@ -100,7 +79,7 @@
   },
   "sessao": {
     "ultimo_ok": "2026-11-18T12:40:42-03:00",
-    "falha_desde": null,
-    "erro": null
+    "falha_desde": "2026-11-19T15:24:07-03:00",
+    "erro": "sem_sessao"
   }
 }
