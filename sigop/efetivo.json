@@ -52,7 +52,7 @@
       ]
     },
     "2026-11-19": {
-      "coletado_em": "2026-11-18T12:40:42-03:00",
+      "coletado_em": "2026-11-19T15:26:00-03:00",
       "equipe": [
         {
           "nome": "2º TEN QOC ROCHA",
@@ -75,11 +75,32 @@
           "funcao": "MOTORISTA"
         }
       ]
+    },
+    "2026-11-20": {
+      "coletado_em": "2026-11-19T15:26:00-03:00",
+      "equipe": [
+        {
+          "nome": "2º TEN QOC ROCHA",
+          "funcao": "CHEFE DE SOCORRO"
+        },
+        {
+          "nome": "BC LIMA",
+          "funcao": "COMANDANTE DE GUARNIÇÃO"
+        },
+        {
+          "nome": "BC JOSÉ CARLOS",
+          "funcao": "CHEFE DA 1ª LINHA"
+        },
+        {
+          "nome": "3º SGT QPBM-0 JAYRON",
+          "funcao": "MOTORISTA"
+        }
+      ]
     }
   },
   "sessao": {
-    "ultimo_ok": "2026-11-18T12:40:42-03:00",
-    "falha_desde": "2026-11-19T15:24:07-03:00",
-    "erro": "sem_sessao"
+    "ultimo_ok": "2026-11-19T15:26:00-03:00",
+    "falha_desde": null,
+    "erro": null
   }
 }
