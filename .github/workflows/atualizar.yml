@@ -212,7 +212,8 @@ jobs:
           args=(--modo "$MODO")
           if [ "$TESTE_ALERTA" = "true" ]; then args+=(--teste-alerta); fi
           python atualizar.py --dados ../dados --site ../_site --horario "$HORARIO" "${args[@]}"
-      - name: Gravar dados
+      - id: gravar
+        name: Gravar dados
         if: always() && steps.decidir.outputs.rodar == 'true'
         working-directory: dados
         run: |
@@ -222,8 +223,13 @@ jobs:
           git diff --cached --quiet || git commit -q -m "dados: $(date +%Y-%m-%dT%H:%M)"
           # O Mac também grava no ramo dados (sigop/efetivo.json, arquivo que o coletor não toca):
           # traz o que chegou durante a execução antes de enviar.
+          # O commit enviado é a versão da publicação do site (passo "Publicar o site"): existe no repositório e
+          # muda a cada completa.
           for tentativa in 1 2 3; do
-            git pull -q --rebase origin dados && git push -q && exit 0
+            if git pull -q --rebase origin dados && git push -q; then
+              echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             sleep 5
           done
           exit 1
@@ -237,12 +243,14 @@ jobs:
         if: steps.decidir.outputs.rodar == 'true'
         working-directory: codigo
         env:
-          # Publica pelo número do pacote, com versão única por execução, e confere o status.json no ar.
+          # Publica pelo número do pacote, com o commit gravado no ramo dados como versão, e confere o
+          # status.json no ar.
           # Não usa actions/deploy-pages: ela procura o pacote por listagem e falha logo depois do envio
           # (actions/deploy-pages#451) e repete o GITHUB_SHA como versão nos disparos manuais, dizendo
           # sucesso sem publicar (#383). Ver publicar_pages.py.
           GH_TOKEN: ${{ github.token }}
           ARTEFATO: ${{ steps.pacote.outputs.artifact_id }}
+          VERSAO: ${{ steps.gravar.outputs.sha }}
         run: python publicar_pages.py --artefato "$ARTEFATO" --site ../_site
       - name: Manter o agendamento ativo
         if: steps.decidir.outputs.rodar == 'true'
