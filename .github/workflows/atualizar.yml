@@ -76,11 +76,17 @@ jobs:
           # das :45 completa 60 min às :45 da hora seguinte; o relógio das :52 pega o lote das :49).
           # Se a ANA atrasar, tenta de novo a cada disparo até INSISTIR_ATE_MIN; depois disso a
           # estação está parada e volta à regra da hora. ULTIMA_COMPLETA_MIN garante planilha e tempo
-          # atualizados mesmo sem leitura nova. INTERVALO_MIN_MIN segura disparos colados (reserva).
+          # atualizados mesmo sem leitura nova; FOLGA_MIN cobre os segundos entre o disparo e a marca
+          # (marca às :37:14, disparo às :37:02 seguinte = 59,8 min). INTERVALO_MIN_MIN segura disparos
+          # colados (reserva). Site atrasado em relação ao ramo dados (SITE_ATRASADO_MIN) é publicação
+          # que falhou depois de gravar os dados: repete a cada disparo, sem o teto de INSISTIR_ATE_MIN
+          # (em 24/11/2026 o teto deixou o site parado às 07:45 até as 11:52).
           LOTE_NOVO_MIN = 60
           INSISTIR_ATE_MIN = 180
           ULTIMA_COMPLETA_MIN = 60
+          FOLGA_MIN = 1
           INTERVALO_MIN_MIN = 10
+          SITE_ATRASADO_MIN = 5
           FUSO = timezone(timedelta(hours=-3))  # Pedreiras, sem horário de verão
           MARCA = Path("dados/ultima_completa.json")
           MEDICOES = Path("dados/medicoes/33281000")  # Pedreiras II, um CSV por mês em ordem
@@ -120,13 +126,18 @@ jobs:
 
 
           def leitura_no_ramo():
-              """Minutos desde a leitura mais nova publicada no ramo dados; None se não der para saber."""
+              """Minutos desde a leitura com cota mais nova do ramo dados; None se não der para saber.
+
+              Só linhas com cota, como a última medição que o site mostra.
+              """
               try:
                   for arquivo in sorted(MEDICOES.glob("*.csv"), reverse=True):
-                      linhas = [l for l in arquivo.read_text(encoding="utf-8").splitlines()[1:] if l.strip()]
-                      if linhas:
-                          leitura = datetime.strptime(linhas[-1].split(",", 1)[0], "%Y-%m-%d %H:%M:%S")
-                          return minutos_desde(leitura.replace(tzinfo=FUSO))
+                      linhas = arquivo.read_text(encoding="utf-8").splitlines()[1:]
+                      for linha in reversed(linhas):
+                          campos = linha.split(",")
+                          if len(campos) > 1 and campos[1].strip():
+                              leitura = datetime.strptime(campos[0], "%Y-%m-%d %H:%M:%S")
+                              return minutos_desde(leitura.replace(tzinfo=FUSO))
               except (OSError, ValueError):
                   pass
               return None
@@ -136,13 +147,14 @@ jobs:
               idade = minutos_desde(datetime.fromisoformat(ler(MARCA)["inicio"]))
           except (KeyError, TypeError, ValueError):
               idade = None  # sem marca, ilegível ou sem fuso: monta o site
-          leitura, fonte = leitura_no_site(), "site"
-          if leitura is None:
-              leitura, fonte = leitura_no_ramo(), "ramo dados"
+          site, ramo = leitura_no_site(), leitura_no_ramo()
+          leitura, fonte = (site, "site") if site is not None else (ramo, "ramo dados")
           automatico = bool(os.environ.get("AGENDAMENTO")) or os.environ.get("RELOGIO") == "true"
-          lote_novo = (idade is not None and idade >= INTERVALO_MIN_MIN
-                       and leitura is not None and LOTE_NOVO_MIN <= leitura < INSISTIR_ATE_MIN)
-          if not automatico or idade is None or idade >= ULTIMA_COMPLETA_MIN or lote_novo:
+          pode_repetir = idade is not None and idade >= INTERVALO_MIN_MIN
+          lote_novo = pode_repetir and leitura is not None and LOTE_NOVO_MIN <= leitura < INSISTIR_ATE_MIN
+          site_atrasado = site is not None and ramo is not None and site - ramo >= SITE_ATRASADO_MIN
+          if (not automatico or idade is None or idade >= ULTIMA_COMPLETA_MIN - FOLGA_MIN or lote_novo
+                  or (pode_repetir and site_atrasado)):
               modo = "completo"
               MARCA.write_text(json.dumps({"inicio": agora.isoformat(timespec="seconds")}) + "\n",
                                encoding="utf-8")
@@ -155,7 +167,9 @@ jobs:
 
 
           print(f"última completa há {texto(idade)} min; leitura publicada há {texto(leitura)} min "
-                f"({fonte}); modo: {modo or 'nenhum'}")
+                f"({fonte}); no ramo dados há {texto(ramo)} min"
+                f"{'; site atrasado: publicação anterior falhou' if site_atrasado else ''}; "
+                f"modo: {modo or 'nenhum'}")
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as saida:
               saida.write(f"rodar={'true' if modo else 'false'}\nmodo={modo}\n")
           PY
@@ -213,13 +227,23 @@ jobs:
             sleep 5
           done
           exit 1
-      - uses: actions/upload-pages-artifact@v3
+      - id: pacote
+        uses: actions/upload-pages-artifact@v3
         if: steps.decidir.outputs.rodar == 'true'
         with:
           path: _site
       - id: publicar
+        name: Publicar o site e conferir no ar
         if: steps.decidir.outputs.rodar == 'true'
-        uses: actions/deploy-pages@v4
+        working-directory: codigo
+        env:
+          # Publica pelo número do pacote, com versão única por execução, e confere o status.json no ar.
+          # Não usa actions/deploy-pages: ela procura o pacote por listagem e falha logo depois do envio
+          # (actions/deploy-pages#451) e repete o GITHUB_SHA como versão nos disparos manuais, dizendo
+          # sucesso sem publicar (#383). Ver publicar_pages.py.
+          GH_TOKEN: ${{ github.token }}
+          ARTEFATO: ${{ steps.pacote.outputs.artifact_id }}
+        run: python publicar_pages.py --artefato "$ARTEFATO" --site ../_site
       - name: Manter o agendamento ativo
         if: steps.decidir.outputs.rodar == 'true'
         env:
